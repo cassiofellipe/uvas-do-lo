@@ -555,6 +555,49 @@ img { max-width: 100%; display: block; }
         </div>
       </div>
       <div class="adm-card">
+        <div class="adm-card-title">Stats (números em destaque)</div>
+        <div class="af-row">
+          <div class="af">
+            <label>Stat 1 — valor</label>
+            <input type="text" id="hero_stat1" placeholder="2014"/>
+          </div>
+          <div class="af">
+            <label>Stat 1 — legenda</label>
+            <input type="text" id="hero_stat1l" placeholder="desde"/>
+          </div>
+        </div>
+        <div class="af-row">
+          <div class="af">
+            <label>Stat 2 — valor</label>
+            <input type="text" id="hero_stat2" placeholder="7"/>
+          </div>
+          <div class="af">
+            <label>Stat 2 — legenda</label>
+            <input type="text" id="hero_stat2l" placeholder="variedades"/>
+          </div>
+        </div>
+        <div class="af-row">
+          <div class="af">
+            <label>Stat 3 — valor</label>
+            <input type="text" id="hero_stat3" placeholder="1h30"/>
+          </div>
+          <div class="af">
+            <label>Stat 3 — legenda</label>
+            <input type="text" id="hero_stat3l" placeholder="duração"/>
+          </div>
+        </div>
+        <div class="af-row">
+          <div class="af">
+            <label>Stat 4 — valor</label>
+            <input type="text" id="hero_stat4" placeholder="Sáb–Dom"/>
+          </div>
+          <div class="af">
+            <label>Stat 4 — legenda</label>
+            <input type="text" id="hero_stat4l" placeholder="funcionamento"/>
+          </div>
+        </div>
+      </div>
+      <div class="adm-card">
         <div class="adm-card-title">Imagem de Fundo</div>
         <div class="imgur-hint">
           📷 <strong>Como trocar a foto:</strong> acesse <a href="https://imgur.com" target="_blank">imgur.com</a> → arraste sua foto → clique com botão direito na imagem → "Copiar endereço da imagem" → cole abaixo.
@@ -1080,11 +1123,15 @@ function showDemoMode() {
 // ── DEFAULT VALUES ─────────────────────────────────────
 const DEFAULTS = {
   hero: {
-    pill:  '🍇 Aracê · Pedra Azul · Espírito Santo',
-    title: 'Piquenique na Parreira',
-    sub:   'Uma experiência única entre fileiras de uvas — tranquilidade, gastronomia artesanal e contato verdadeiro com a natureza serrana.',
-    btn1:  '🧺 Agendar Piquenique',
-    btn2:  '🍇 Conhecer as Uvas',
+    pill:   '🍇 Aracê · Pedra Azul · Espírito Santo',
+    title:  'Piquenique na Parreira',
+    sub:    'Uma experiência única entre fileiras de uvas — tranquilidade, gastronomia artesanal e contato verdadeiro com a natureza serrana.',
+    btn1:   '🧺 Agendar Piquenique',
+    btn2:   '🍇 Conhecer as Uvas',
+    stat1:  '2014',  stat1l: 'desde',
+    stat2:  '7',     stat2l: 'variedades',
+    stat3:  '1h30',  stat3l: 'duração',
+    stat4:  'Sáb–Dom', stat4l: 'funcionamento',
   },
   historia: {
     title: 'Uma história de dedicação e sucesso',
@@ -1127,6 +1174,10 @@ function loadDefaultValues() {
   const h = DEFAULTS.hero;
   setVal('hero_pill', h.pill); setVal('hero_title', h.title);
   setVal('hero_sub', h.sub); setVal('hero_btn1', h.btn1); setVal('hero_btn2', h.btn2);
+  setVal('hero_stat1', h.stat1); setVal('hero_stat1l', h.stat1l);
+  setVal('hero_stat2', h.stat2); setVal('hero_stat2l', h.stat2l);
+  setVal('hero_stat3', h.stat3); setVal('hero_stat3l', h.stat3l);
+  setVal('hero_stat4', h.stat4); setVal('hero_stat4l', h.stat4l);
 
   const hi = DEFAULTS.historia;
   setVal('hist_title', hi.title); setVal('hist_p1', hi.p1);
@@ -1169,6 +1220,10 @@ async function loadAllData() {
         setVal('hero_pill', data.pill); setVal('hero_title', data.title);
         setVal('hero_sub', data.sub); setVal('hero_btn1', data.btn1); setVal('hero_btn2', data.btn2);
         if (data.imgUrl) { setVal('hero_imgUrl', data.imgUrl); previewUrl(data.imgUrl,'heroImgPreview'); }
+        setVal('hero_stat1', data.stat1); setVal('hero_stat1l', data.stat1l);
+        setVal('hero_stat2', data.stat2); setVal('hero_stat2l', data.stat2l);
+        setVal('hero_stat3', data.stat3); setVal('hero_stat3l', data.stat3l);
+        setVal('hero_stat4', data.stat4); setVal('hero_stat4l', data.stat4l);
       }
       if (sec === 'historia') {
         setVal('hist_title', data.title);
@@ -1216,7 +1271,7 @@ async function saveSection(section) {
 
 function collectSectionData(sec) {
   const g = id => document.getElementById(id)?.value || '';
-  if (sec === 'hero')      return { pill:g('hero_pill'), title:g('hero_title'), sub:g('hero_sub'), btn1:g('hero_btn1'), btn2:g('hero_btn2'), imgUrl:g('hero_imgUrl') };
+  if (sec === 'hero')      return { pill:g('hero_pill'), title:g('hero_title'), sub:g('hero_sub'), btn1:g('hero_btn1'), btn2:g('hero_btn2'), imgUrl:g('hero_imgUrl'), stat1:g('hero_stat1'), stat1l:g('hero_stat1l'), stat2:g('hero_stat2'), stat2l:g('hero_stat2l'), stat3:g('hero_stat3'), stat3l:g('hero_stat3l'), stat4:g('hero_stat4'), stat4l:g('hero_stat4l') };
   if (sec === 'historia')  return { title:g('hist_title'), p1:g('hist_p1'), p2:g('hist_p2'), p3:g('hist_p3'), p4:g('hist_p4'), imgUrl:g('hist_imgUrl') };
   if (sec === 'piquenique')return { title:g('piq_title'), desc:g('piq_desc'), kit2:g('kit2_price'), kit4:g('kit4_price'), kit6:g('kit6_price'), temporada:g('piq_temporada'), duracao:g('piq_duracao'), sinal:g('piq_sinal'), wa:g('piq_wa'), incluso:g('piq_incluso') };
   if (sec === 'contato')   return { local:g('cont_local'), wa:g('cont_wa'), temporada:g('cont_temporada'), func:g('cont_func'), email:g('cont_email') };

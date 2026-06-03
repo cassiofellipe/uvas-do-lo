@@ -783,13 +783,13 @@ h2 em, h1 em { font-style: italic; color: var(--wine-500); }
       <a href="#uvas" class="btn btn-ghost" id="cms-hero-btn2">🍇 Conhecer as Uvas</a>
     </div>
     <div class="hero-stats">
-      <div class="hero-stat"><span>2014</span><small>desde</small></div>
+      <div class="hero-stat"><span id="cms-hero-stat1">2014</span><small id="cms-hero-stat1-label">desde</small></div>
       <div class="hero-stat-sep"></div>
-      <div class="hero-stat"><span>7</span><small>variedades</small></div>
+      <div class="hero-stat"><span id="cms-hero-stat2">7</span><small id="cms-hero-stat2-label">variedades</small></div>
       <div class="hero-stat-sep"></div>
-      <div class="hero-stat"><span>1h30</span><small>duração</small></div>
+      <div class="hero-stat"><span id="cms-hero-stat3">1h30</span><small id="cms-hero-stat3-label">duração</small></div>
       <div class="hero-stat-sep"></div>
-      <div class="hero-stat"><span>Sáb–Dom</span><small>funcionamento</small></div>
+      <div class="hero-stat"><span id="cms-hero-stat4">Sáb–Dom</span><small id="cms-hero-stat4-label">funcionamento</small></div>
     </div>
   </div>
   <div class="hero-scroll">
@@ -1308,28 +1308,28 @@ h2 em, h1 em { font-style: italic; color: var(--wine-500); }
             <span class="ico">📍</span>
             <div>
               <strong>Localização</strong>
-              <p>Aracê, Domingos Martins — ES · Próximo a Pedra Azul</p>
+              <p id="cms-cont-local">Aracê, Domingos Martins — ES · Próximo a Pedra Azul</p>
             </div>
           </div>
           <div class="c-item">
             <span class="ico">📱</span>
             <div>
               <strong>WhatsApp</strong>
-              <p>(21) 96529-4486 · Cássio Fellipe</p>
+              <p id="cms-cont-wa">(21) 96529-4486 · Cássio Fellipe</p>
             </div>
           </div>
           <div class="c-item">
             <span class="ico">🗓</span>
             <div>
               <strong>Temporada de Visita</strong>
-              <p>Janeiro · Fevereiro · Março</p>
+              <p id="cms-cont-temporada">Janeiro · Fevereiro · Março</p>
             </div>
           </div>
           <div class="c-item">
             <span class="ico">⏰</span>
             <div>
               <strong>Funcionamento</strong>
-              <p>Sexta, Sábado e Domingo · Das 09h às 18h</p>
+              <p id="cms-cont-func">Sexta, Sábado e Domingo · Das 09h às 18h</p>
             </div>
           </div>
         </div>
@@ -1548,12 +1548,20 @@ async function loadSiteContent() {
       const s = doc.id;
 
       if (s === 'hero') {
-        if (d.pill)  { const el = document.getElementById('cms-hero-pill');  if(el) el.textContent = d.pill; }
-        if (d.title) { const el = document.getElementById('cms-hero-title'); if(el) el.textContent = d.title; }
-        if (d.sub)   { const el = document.getElementById('cms-hero-sub');   if(el) el.textContent = d.sub; }
-        if (d.btn1)  { const el = document.getElementById('cms-hero-btn1');  if(el) el.textContent = d.btn1; }
-        if (d.btn2)  { const el = document.getElementById('cms-hero-btn2');  if(el) el.textContent = d.btn2; }
-        if (d.imgUrl){ const el = document.querySelector('.hero-img');        if(el) el.src = d.imgUrl; }
+        if (d.pill)   { const el = document.getElementById('cms-hero-pill');  if(el) el.textContent = d.pill; }
+        if (d.title)  { const el = document.getElementById('cms-hero-title'); if(el) el.textContent = d.title; }
+        if (d.sub)    { const el = document.getElementById('cms-hero-sub');   if(el) el.textContent = d.sub; }
+        if (d.btn1)   { const el = document.getElementById('cms-hero-btn1');  if(el) el.textContent = d.btn1; }
+        if (d.btn2)   { const el = document.getElementById('cms-hero-btn2');  if(el) el.textContent = d.btn2; }
+        if (d.stat1)  { const el = document.getElementById('cms-hero-stat1'); if(el) el.textContent = d.stat1; }
+        if (d.stat1l) { const el = document.getElementById('cms-hero-stat1-label'); if(el) el.textContent = d.stat1l; }
+        if (d.stat2)  { const el = document.getElementById('cms-hero-stat2'); if(el) el.textContent = d.stat2; }
+        if (d.stat2l) { const el = document.getElementById('cms-hero-stat2-label'); if(el) el.textContent = d.stat2l; }
+        if (d.stat3)  { const el = document.getElementById('cms-hero-stat3'); if(el) el.textContent = d.stat3; }
+        if (d.stat3l) { const el = document.getElementById('cms-hero-stat3-label'); if(el) el.textContent = d.stat3l; }
+        if (d.stat4)  { const el = document.getElementById('cms-hero-stat4'); if(el) el.textContent = d.stat4; }
+        if (d.stat4l) { const el = document.getElementById('cms-hero-stat4-label'); if(el) el.textContent = d.stat4l; }
+        if (d.imgUrl) { const el = document.querySelector('.hero-img'); if(el) el.src = d.imgUrl; }
       }
 
       if (s === 'historia') {
@@ -1563,6 +1571,13 @@ async function loadSiteContent() {
         if (d.p3)    { const el = document.getElementById('cms-hist-p3');    if(el) el.textContent = d.p3; }
         if (d.p4)    { const el = document.getElementById('cms-hist-p4');    if(el) el.textContent = d.p4; }
         if (d.imgUrl){ const el = document.getElementById('cms-hist-img');   if(el) el.src = d.imgUrl; }
+      }
+
+      if (s === 'contato') {
+        if (d.local)     { const el = document.getElementById('cms-cont-local');     if(el) el.textContent = d.local; }
+        if (d.wa)        { const el = document.getElementById('cms-cont-wa');        if(el) el.textContent = d.wa; }
+        if (d.temporada) { const el = document.getElementById('cms-cont-temporada'); if(el) el.textContent = d.temporada; }
+        if (d.func)      { const el = document.getElementById('cms-cont-func');      if(el) el.textContent = d.func; }
       }
     });
   } catch(e) { console.warn('Erro ao carregar conteúdo:', e.message); }
