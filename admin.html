@@ -1,0 +1,1590 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Admin — Uvas do Ló</title>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<style>
+/* ============================================================
+   UVAS DO LÓ — Admin Panel
+   ============================================================ */
+:root {
+  --wine:     #751528;
+  --wine-dk:  #5a1020;
+  --wine-lt:  #a8263c;
+  --wine-bg:  #faf7f2;
+  --beige:    #f4ede1;
+  --beige-dk: #ede3d4;
+  --border:   #e0d5c5;
+  --text:     #2d2d2d;
+  --text-mid: #525252;
+  --text-lt:  #8c8c8c;
+  --white:    #ffffff;
+  --success:  #3d7a48;
+  --error:    #c0392b;
+  --warning:  #d4820a;
+  --sidebar-w: 240px;
+  --header-h:  60px;
+  --radius:    10px;
+  --shadow:    0 2px 12px rgba(58,10,18,.09);
+  --shadow-md: 0 6px 28px rgba(58,10,18,.13);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body { font-family: 'Jost', sans-serif; background: var(--beige); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
+input, textarea, select, button { font-family: inherit; }
+img { max-width: 100%; display: block; }
+
+/* ── LOGIN SCREEN ─────────────────────────────────────── */
+#loginScreen {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--wine-dk) 0%, var(--wine) 60%, #a8263c 100%);
+  padding: 2rem;
+}
+.login-card {
+  background: var(--white); border-radius: 18px; padding: 2.5rem 2.25rem;
+  width: 100%; max-width: 380px; box-shadow: 0 24px 64px rgba(0,0,0,.25);
+}
+.login-logo {
+  text-align: center; margin-bottom: 2rem;
+}
+.login-logo h1 {
+  font-family: 'Cormorant Garamond'; font-size: 1.7rem; font-weight: 600;
+  color: var(--wine); line-height: 1.2;
+}
+.login-logo p { font-size: .78rem; color: var(--text-lt); letter-spacing: .1em; text-transform: uppercase; margin-top: .25rem; }
+.login-form-title { font-size: .78rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; color: var(--text-lt); margin-bottom: 1.25rem; }
+
+.lf { margin-bottom: 1rem; }
+.lf label { display: block; font-size: .75rem; font-weight: 600; color: var(--text); margin-bottom: .35rem; text-transform: uppercase; letter-spacing: .05em; }
+.lf input {
+  width: 100%; padding: .7rem 1rem; border: 1.5px solid var(--border);
+  border-radius: var(--radius); font-size: .9rem; color: var(--text);
+  background: var(--wine-bg); outline: none; transition: border-color .2s;
+}
+.lf input:focus { border-color: var(--wine); background: var(--white); }
+
+.btn-login {
+  width: 100%; padding: .82rem; background: var(--wine); color: var(--white);
+  border: none; border-radius: var(--radius); font-size: .9rem; font-weight: 600;
+  cursor: pointer; transition: background .2s, transform .15s;
+  margin-top: .5rem;
+}
+.btn-login:hover { background: var(--wine-dk); transform: translateY(-1px); }
+.btn-login:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+.login-recovery { text-align: center; margin-top: 1rem; }
+.login-recovery a { font-size: .8rem; color: var(--wine); cursor: pointer; text-decoration: underline; }
+
+.login-error {
+  background: rgba(192,57,43,.08); border: 1px solid rgba(192,57,43,.25);
+  color: var(--error); font-size: .8rem; padding: .6rem .85rem; border-radius: 7px;
+  margin-bottom: 1rem; display: none;
+}
+.login-error.show { display: block; }
+.login-success {
+  background: rgba(61,122,72,.08); border: 1px solid rgba(61,122,72,.25);
+  color: var(--success); font-size: .8rem; padding: .6rem .85rem; border-radius: 7px;
+  margin-bottom: 1rem; display: none;
+}
+.login-success.show { display: block; }
+
+/* ── ADMIN LAYOUT ─────────────────────────────────────── */
+#adminApp { display: none; min-height: 100vh; }
+
+/* Header */
+.adm-header {
+  position: fixed; top: 0; left: 0; right: 0; height: var(--header-h); z-index: 100;
+  background: var(--wine-dk); color: var(--white);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 1.5rem 0 calc(var(--sidebar-w) + 1.5rem);
+  box-shadow: 0 2px 12px rgba(0,0,0,.2);
+}
+.adm-header-left { display: flex; align-items: center; gap: .75rem; }
+.adm-header-left h2 { font-family: 'Cormorant Garamond'; font-size: 1.15rem; font-weight: 400; }
+.adm-header-right { display: flex; align-items: center; gap: 1rem; }
+.adm-user { font-size: .78rem; color: rgba(255,255,255,.65); }
+.btn-logout {
+  padding: .38rem .9rem; background: rgba(255,255,255,.12); color: var(--white);
+  border: 1px solid rgba(255,255,255,.22); border-radius: 20px; font-size: .75rem;
+  cursor: pointer; transition: background .2s;
+}
+.btn-logout:hover { background: rgba(255,255,255,.22); }
+.adm-menu-toggle {
+  display: none; background: none; border: none; color: var(--white); font-size: 1.3rem; cursor: pointer;
+}
+
+/* Sidebar */
+.adm-sidebar {
+  position: fixed; top: var(--header-h); left: 0; bottom: 0; width: var(--sidebar-w); z-index: 90;
+  background: var(--white); border-right: 1px solid var(--border);
+  overflow-y: auto; padding: 1.25rem 0;
+  box-shadow: 2px 0 12px rgba(58,10,18,.05);
+}
+.sidebar-section { margin-bottom: .25rem; }
+.sidebar-label {
+  font-size: .65rem; font-weight: 700; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--text-lt); padding: .6rem 1.25rem .3rem;
+}
+.sidebar-item {
+  display: flex; align-items: center; gap: .7rem; padding: .62rem 1.25rem;
+  font-size: .85rem; color: var(--text-mid); cursor: pointer; border-left: 3px solid transparent;
+  transition: all .18s; user-select: none;
+}
+.sidebar-item:hover { background: var(--beige); color: var(--wine); }
+.sidebar-item.active { background: rgba(117,21,40,.06); color: var(--wine); border-left-color: var(--wine); font-weight: 600; }
+.sidebar-item .si-ico { font-size: 1rem; flex-shrink: 0; }
+.sidebar-divider { height: 1px; background: var(--border); margin: .5rem 1rem; }
+
+/* Main content */
+.adm-main {
+  margin-top: var(--header-h); margin-left: var(--sidebar-w);
+  padding: 2rem 2.25rem; min-height: calc(100vh - var(--header-h));
+}
+
+/* Panels */
+.adm-panel { display: none; }
+.adm-panel.active { display: block; animation: panel-in .22s ease; }
+@keyframes panel-in { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:none } }
+
+.panel-header { margin-bottom: 1.75rem; }
+.panel-header h3 { font-family: 'Cormorant Garamond'; font-size: 1.75rem; color: var(--wine); font-weight: 500; }
+.panel-header p { font-size: .83rem; color: var(--text-lt); margin-top: .25rem; }
+
+/* Cards */
+.adm-card {
+  background: var(--white); border-radius: var(--radius); padding: 1.5rem;
+  border: 1px solid var(--border); margin-bottom: 1.25rem;
+  box-shadow: var(--shadow);
+}
+.adm-card-title {
+  font-size: .72rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--text-lt); margin-bottom: 1.1rem; display: flex; align-items: center; gap: .5rem;
+}
+.adm-card-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* Form fields */
+.af { margin-bottom: 1rem; }
+.af label { display: block; font-size: .75rem; font-weight: 600; color: var(--text); margin-bottom: .35rem; text-transform: uppercase; letter-spacing: .05em; }
+.af label span { font-weight: 400; color: var(--text-lt); text-transform: none; letter-spacing: 0; margin-left: .3rem; }
+.af input[type=text], .af input[type=tel], .af input[type=email], .af input[type=url], .af textarea, .af select {
+  width: 100%; padding: .65rem .9rem; border: 1.5px solid var(--border);
+  border-radius: 8px; font-size: .88rem; color: var(--text);
+  background: var(--wine-bg); outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.af input:focus, .af textarea:focus, .af select:focus {
+  border-color: var(--wine); background: var(--white);
+  box-shadow: 0 0 0 3px rgba(117,21,40,.07);
+}
+.af textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+.af-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.af-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+
+/* Rich text hint */
+.rich-hint { font-size: .72rem; color: var(--text-lt); margin-top: .3rem; }
+
+/* Image upload */
+/* img fields */
+.img-url-field { display: flex; gap: .6rem; align-items: flex-start; }
+.img-url-field input { flex: 1; }
+.btn-preview-img {
+  padding: .65rem .9rem; background: var(--beige); border: 1.5px solid var(--border);
+  border-radius: 8px; font-size: .82rem; cursor: pointer; white-space: nowrap;
+  transition: all .2s; color: var(--text-mid);
+}
+.btn-preview-img:hover { border-color: var(--wine); color: var(--wine); }
+.img-preview-wrap { margin-top: .75rem; }
+.img-preview { width: 100%; max-height: 220px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); display: none; }
+.img-preview.show { display: block; }
+.imgur-hint {
+  background: rgba(107,122,82,.08); border: 1px solid rgba(107,122,82,.2);
+  border-radius: 8px; padding: .7rem 1rem; font-size: .78rem; color: #3a4a20;
+  margin-bottom: .75rem; line-height: 1.6;
+}
+.imgur-hint a { color: var(--wine); font-weight: 600; }
+/* Galeria grid */
+.imgs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: .85rem; margin-top: .75rem; }
+.img-url-card { background: var(--wine-bg); border: 1px solid var(--border); border-radius: 8px; padding: .85rem; }
+.img-url-card .card-thumb { width: 100%; height: 110px; object-fit: cover; border-radius: 6px; margin-bottom: .6rem; border: 1px solid var(--border); display: none; }
+.img-url-card .card-thumb.show { display: block; }
+.img-url-card input { width: 100%; border: 1.5px solid var(--border); border-radius: 6px; padding: .42rem .7rem; font-size: .8rem; outline: none; font-family: inherit; margin-bottom: .4rem; background: var(--white); }
+.img-url-card input:focus { border-color: var(--wine); }
+.img-url-card label { font-size: .7rem; font-weight: 600; color: var(--text-lt); text-transform: uppercase; letter-spacing: .06em; display: block; margin-bottom: .25rem; }
+.img-url-card-actions { display: flex; gap: .4rem; }
+.btn-check-url { flex: 1; padding: .38rem; background: var(--wine); color: var(--white); border: none; border-radius: 5px; font-size: .75rem; cursor: pointer; font-family: inherit; }
+.btn-check-url:hover { background: var(--wine-dk); }
+/* Save button */
+.btn-save {
+  padding: .7rem 1.75rem; background: var(--wine); color: var(--white);
+  border: none; border-radius: 8px; font-size: .88rem; font-weight: 600;
+  cursor: pointer; transition: background .2s, transform .15s;
+  display: inline-flex; align-items: center; gap: .5rem;
+}
+.btn-save:hover { background: var(--wine-dk); transform: translateY(-1px); }
+.btn-save:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+.btn-secondary {
+  padding: .7rem 1.25rem; background: transparent; color: var(--text-mid);
+  border: 1.5px solid var(--border); border-radius: 8px; font-size: .85rem;
+  cursor: pointer; transition: all .2s;
+}
+.btn-secondary:hover { border-color: var(--wine); color: var(--wine); }
+
+/* Progress bar */
+.upload-progress { margin-top: .6rem; display: none; }
+.upload-progress.show { display: block; }
+.progress-bar { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--wine); border-radius: 2px; transition: width .3s; }
+.progress-text { font-size: .72rem; color: var(--text-lt); margin-top: .3rem; }
+
+/* Toast */
+.adm-toast {
+  position: fixed; bottom: 1.75rem; right: 1.75rem; z-index: 9999;
+  background: var(--text); color: var(--white); padding: .8rem 1.4rem;
+  border-radius: 8px; font-size: .85rem; font-weight: 500;
+  box-shadow: var(--shadow-md); opacity: 0; transform: translateY(12px);
+  transition: all .3s; pointer-events: none; max-width: 320px;
+}
+.adm-toast.show { opacity: 1; transform: translateY(0); }
+.adm-toast.success { background: var(--success); }
+.adm-toast.error   { background: var(--error); }
+.adm-toast.warning { background: var(--warning); }
+
+/* Status badge */
+.status-badge {
+  display: inline-flex; align-items: center; gap: .35rem;
+  font-size: .72rem; font-weight: 600; padding: .22rem .7rem; border-radius: 20px;
+}
+.status-saved { background: rgba(61,122,72,.1); color: var(--success); }
+.status-pending { background: rgba(212,130,10,.1); color: var(--warning); }
+
+/* Dashboard stats */
+.dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.1rem; margin-bottom: 2rem; }
+.dash-stat {
+  background: var(--white); border-radius: var(--radius); padding: 1.25rem;
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+}
+.dash-stat .ds-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--text-lt); }
+.dash-stat .ds-val { font-family: 'Cormorant Garamond'; font-size: 2.2rem; color: var(--wine); font-weight: 600; line-height: 1.1; margin: .3rem 0 .1rem; }
+.dash-stat .ds-sub { font-size: .75rem; color: var(--text-lt); }
+.dash-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+.dash-action-card {
+  background: var(--white); border-radius: var(--radius); padding: 1.25rem 1.5rem;
+  border: 1px solid var(--border); box-shadow: var(--shadow); cursor: pointer;
+  transition: all .2s; display: flex; align-items: center; gap: 1rem;
+}
+.dash-action-card:hover { border-color: var(--wine); transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.dash-action-card .dac-ico { font-size: 1.8rem; flex-shrink: 0; }
+.dash-action-card h4 { font-size: .9rem; color: var(--wine); font-family: 'Jost'; }
+.dash-action-card p { font-size: .78rem; color: var(--text-lt); margin-top: .15rem; }
+
+/* Dias disponíveis table */
+.dias-table { width: 100%; border-collapse: collapse; }
+.dias-table th { text-align: left; font-size: .72rem; text-transform: uppercase; letter-spacing: .1em; color: var(--text-lt); padding: .5rem .75rem; border-bottom: 1px solid var(--border); }
+.dias-table td { padding: .6rem .75rem; border-bottom: 1px solid var(--border); font-size: .85rem; }
+.dias-table tr:last-child td { border-bottom: none; }
+.dia-tag { display: inline-block; font-size: .7rem; font-weight: 700; padding: .15rem .55rem; border-radius: 12px; }
+.dia-sex { background: rgba(107,122,82,.15); color: #3a4a20; }
+.dia-sab { background: rgba(117,21,40,.1); color: var(--wine); }
+.dia-dom { background: rgba(117,21,40,.16); color: var(--wine-dk); }
+.btn-add-dia { display: flex; align-items: center; gap: .4rem; font-size: .82rem; color: var(--wine); cursor: pointer; background: none; border: none; padding: .5rem 0; font-weight: 600; }
+.btn-remove-dia { background: none; border: none; cursor: pointer; color: var(--error); font-size: .9rem; padding: .2rem; }
+
+/* Uvas cards grid */
+.uvas-admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1rem; }
+.uva-admin-card {
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; box-shadow: var(--shadow);
+}
+.uva-admin-thumb { height: 120px; overflow: hidden; position: relative; }
+.uva-admin-thumb img { width: 100%; height: 100%; object-fit: cover; }
+.uva-admin-thumb-upload {
+  position: absolute; inset: 0; background: rgba(0,0,0,.45);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s; cursor: pointer; font-size: .75rem; color: var(--white);
+}
+.uva-admin-card:hover .uva-admin-thumb-upload { opacity: 1; }
+.uva-admin-thumb input[type=file] { display: none; }
+.uva-admin-body { padding: 1rem; }
+.uva-admin-body input { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: .4rem .6rem; font-size: .82rem; margin-bottom: .5rem; outline: none; font-family: inherit; }
+.uva-admin-body input:focus { border-color: var(--wine); }
+.uva-admin-body textarea { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: .4rem .6rem; font-size: .78rem; resize: vertical; min-height: 60px; outline: none; font-family: inherit; }
+.uva-admin-body textarea:focus { border-color: var(--wine); }
+
+/* Reservas */
+.btn-filter {
+  padding: .35rem .9rem; border-radius: 20px; font-size: .78rem; font-weight: 600;
+  cursor: pointer; border: 1.5px solid var(--border); background: var(--white);
+  color: var(--text-mid); transition: all .2s; font-family: inherit;
+}
+.btn-filter:hover { border-color: var(--wine); color: var(--wine); }
+.btn-filter.active { background: var(--wine); color: var(--white); border-color: var(--wine); }
+.reserva-card {
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 1rem 1.1rem; margin-bottom: .75rem;
+}
+.reserva-card.status-pendente  { border-left: 3px solid var(--warning); }
+.reserva-card.status-confirmada{ border-left: 3px solid var(--success); }
+.reserva-card.status-cancelada { border-left: 3px solid var(--error); opacity:.7; }
+.reserva-nome { font-weight:700; color:var(--wine); font-size:.92rem; }
+.reserva-info { font-size:.8rem; color:var(--text-mid); line-height:1.8; margin:.4rem 0 .6rem; }
+.reserva-actions { display:flex; gap:.5rem; flex-wrap:wrap; align-items:center; }
+.btn-confirmar { padding:.32rem .85rem; background:var(--success); color:#fff; border:none; border-radius:6px; font-size:.75rem; font-weight:600; cursor:pointer; font-family:inherit; }
+.btn-cancelar  { padding:.32rem .85rem; background:transparent; color:var(--error); border:1.5px solid var(--error); border-radius:6px; font-size:.75rem; font-weight:600; cursor:pointer; font-family:inherit; }
+.btn-wa-resp   { padding:.32rem .85rem; background:#1da851; color:#fff; border:none; border-radius:6px; font-size:.75rem; font-weight:600; cursor:pointer; font-family:inherit; text-decoration:none; display:inline-flex; align-items:center; gap:.3rem; }
+.badge-status  { font-size:.68rem; font-weight:700; padding:.15rem .65rem; border-radius:12px; }
+.badge-pendente   { background:rgba(212,130,10,.12); color:var(--warning); }
+.badge-confirmada { background:rgba(61,122,72,.12); color:var(--success); }
+.badge-cancelada  { background:rgba(192,57,43,.1); color:var(--error); }
+
+/* Responsive */
+@media (max-width: 900px) {
+  :root { --sidebar-w: 0px; }
+  .adm-header { padding-left: 1.25rem; }
+  .adm-sidebar {
+    transform: translateX(-240px); width: 240px;
+    transition: transform .3s; box-shadow: none;
+  }
+  .adm-sidebar.open { transform: translateX(0); box-shadow: var(--shadow-md); }
+  .adm-main { margin-left: 0; padding: 1.25rem; }
+  .adm-menu-toggle { display: block; }
+  .dash-grid { grid-template-columns: 1fr 1fr; }
+  .af-row, .af-row-3 { grid-template-columns: 1fr; }
+  .dash-actions { grid-template-columns: 1fr; }
+}
+@media (max-width: 480px) {
+  .dash-grid { grid-template-columns: 1fr 1fr; }
+  .uvas-admin-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ LOGIN SCREEN ══════════════ -->
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">
+      <h1>🍇 Uvas do Ló</h1>
+      <p>Painel Administrativo</p>
+    </div>
+    <div class="login-form-title">Entrar na conta</div>
+    <div class="login-error" id="loginError"></div>
+    <div class="login-success" id="loginSuccess"></div>
+    <div id="formLogin">
+      <div class="lf">
+        <label>E-mail</label>
+        <input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email"/>
+      </div>
+      <div class="lf">
+        <label>Senha</label>
+        <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter') doLogin()"/>
+      </div>
+      <button class="btn-login" id="btnLogin" onclick="doLogin()">Entrar</button>
+      <div class="login-recovery">
+        <a onclick="showRecovery()">Esqueci minha senha</a>
+      </div>
+    </div>
+    <div id="formRecovery" style="display:none">
+      <div class="lf">
+        <label>E-mail cadastrado</label>
+        <input type="email" id="recoveryEmail" placeholder="seu@email.com"/>
+      </div>
+      <button class="btn-login" onclick="doRecovery()">Enviar link de recuperação</button>
+      <div class="login-recovery">
+        <a onclick="showLogin()">← Voltar ao login</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ADMIN APP ══════════════ -->
+<div id="adminApp">
+
+  <!-- Header -->
+  <header class="adm-header">
+    <div class="adm-header-left">
+      <button class="adm-menu-toggle" onclick="toggleSidebar()">☰</button>
+      <h2 id="headerTitle">Dashboard</h2>
+    </div>
+    <div class="adm-header-right">
+      <span class="adm-user" id="userEmail"></span>
+      <button class="btn-logout" onclick="doLogout()">Sair</button>
+    </div>
+  </header>
+
+  <!-- Sidebar -->
+  <nav class="adm-sidebar" id="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Geral</div>
+      <div class="sidebar-item active" onclick="showPanel('dashboard')" data-panel="dashboard">
+        <span class="si-ico">🏠</span> Dashboard
+      </div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Conteúdo do Site</div>
+      <div class="sidebar-item" onclick="showPanel('hero')" data-panel="hero">
+        <span class="si-ico">🖼️</span> Capa (Hero)
+      </div>
+      <div class="sidebar-item" onclick="showPanel('historia')" data-panel="historia">
+        <span class="si-ico">📖</span> Nossa História
+      </div>
+      <div class="sidebar-item" onclick="showPanel('uvas')" data-panel="uvas">
+        <span class="si-ico">🍇</span> Nossas Uvas
+      </div>
+      <div class="sidebar-item" onclick="showPanel('piquenique')" data-panel="piquenique">
+        <span class="si-ico">🧺</span> Piquenique
+      </div>
+      <div class="sidebar-item" onclick="showPanel('galeria')" data-panel="galeria">
+        <span class="si-ico">📸</span> Galeria de Fotos
+      </div>
+      <div class="sidebar-item" onclick="showPanel('contato')" data-panel="contato">
+        <span class="si-ico">📍</span> Contato
+      </div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Agendamentos</div>
+      <div class="sidebar-item" onclick="showPanel('dias')" data-panel="dias">
+        <span class="si-ico">📅</span> Dias Disponíveis
+      </div>
+      <div class="sidebar-item" onclick="showPanel('horarios')" data-panel="horarios">
+        <span class="si-ico">⏰</span> Horários
+      </div>
+      <div class="sidebar-item" onclick="showPanel('reservas')" data-panel="reservas">
+        <span class="si-ico">📋</span> Reservas
+      </div>
+    </div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">
+      <div class="sidebar-label">Sistema</div>
+      <div class="sidebar-item" onclick="showPanel('config')" data-panel="config">
+        <span class="si-ico">⚙️</span> Configurações
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <main class="adm-main">
+
+    <!-- ─── DASHBOARD ─── -->
+    <div class="adm-panel active" id="panel-dashboard">
+      <div class="panel-header">
+        <h3>Bem-vindo, <span id="dashName">Admin</span> 👋</h3>
+        <p>Gerencie todo o conteúdo do site Uvas do Ló por aqui.</p>
+      </div>
+      <div class="dash-grid">
+        <div class="dash-stat">
+          <div class="ds-label">Seções editáveis</div>
+          <div class="ds-val">6</div>
+          <div class="ds-sub">Textos e mídias</div>
+        </div>
+        <div class="dash-stat">
+          <div class="ds-label">Variedades de uva</div>
+          <div class="ds-val">7</div>
+          <div class="ds-sub">Cards editáveis</div>
+        </div>
+        <div class="dash-stat">
+          <div class="ds-label">Fotos na galeria</div>
+          <div class="ds-val">5</div>
+          <div class="ds-sub">Substituíveis</div>
+        </div>
+        <div class="dash-stat">
+          <div class="ds-label">Reservas novas</div>
+          <div class="ds-val" id="dashReservas">—</div>
+          <div class="ds-sub">Aguardando confirmação</div>
+        </div>
+      </div>
+      <div class="dash-actions">
+        <div class="dash-action-card" onclick="showPanel('piquenique')">
+          <span class="dac-ico">🧺</span>
+          <div><h4>Editar Piquenique</h4><p>Textos, preços e informações da experiência</p></div>
+        </div>
+        <div class="dash-action-card" onclick="showPanel('dias')">
+          <span class="dac-ico">📅</span>
+          <div><h4>Dias Disponíveis</h4><p>Adicionar ou remover datas da temporada</p></div>
+        </div>
+        <div class="dash-action-card" onclick="showPanel('galeria')">
+          <span class="dac-ico">📸</span>
+          <div><h4>Galeria de Fotos</h4><p>Substituir imagens do piquenique</p></div>
+        </div>
+        <div class="dash-action-card" onclick="showPanel('reservas')">
+          <span class="dac-ico">📋</span>
+          <div><h4>Ver Reservas</h4><p>Consultar solicitações de agendamento</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─── HERO ─── -->
+    <div class="adm-panel" id="panel-hero">
+      <div class="panel-header">
+        <h3>🖼️ Capa (Hero)</h3>
+        <p>Título principal, subtítulo e imagem de fundo da página inicial.</p>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Textos</div>
+        <div class="af">
+          <label>Pílula (texto acima do título) <span>ex: 🍇 Aracê · Pedra Azul</span></label>
+          <input type="text" id="hero_pill" placeholder="🍇 Aracê · Pedra Azul · Espírito Santo"/>
+        </div>
+        <div class="af">
+          <label>Título principal</label>
+          <input type="text" id="hero_title" placeholder="Piquenique na Parreira"/>
+        </div>
+        <div class="af">
+          <label>Subtítulo</label>
+          <textarea id="hero_sub" rows="3" placeholder="Uma experiência única entre fileiras de uvas..."></textarea>
+        </div>
+        <div class="af-row">
+          <div class="af">
+            <label>Botão principal <span>texto</span></label>
+            <input type="text" id="hero_btn1" placeholder="🧺 Agendar Piquenique"/>
+          </div>
+          <div class="af">
+            <label>Botão secundário <span>texto</span></label>
+            <input type="text" id="hero_btn2" placeholder="🍇 Conhecer as Uvas"/>
+          </div>
+        </div>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Imagem de Fundo</div>
+        <div class="imgur-hint">
+          📷 <strong>Como trocar a foto:</strong> acesse <a href="https://imgur.com" target="_blank">imgur.com</a> → arraste sua foto → clique com botão direito na imagem → "Copiar endereço da imagem" → cole abaixo.
+        </div>
+        <div class="af">
+          <label>Link da imagem (Imgur ou outro)</label>
+          <div class="img-url-field">
+            <input type="url" id="hero_imgUrl" placeholder="https://i.imgur.com/xxxxxxx.jpg" oninput="previewUrl(this.value,'heroImgPreview')"/>
+            <button class="btn-preview-img" onclick="previewUrl(document.getElementById('hero_imgUrl').value,'heroImgPreview')">👁 Ver</button>
+          </div>
+        </div>
+        <div class="img-preview-wrap">
+          <img class="img-preview" id="heroImgPreview" src="" alt="Preview"/>
+        </div>
+      </div>
+      <button class="btn-save" onclick="saveSection('hero')">💾 Salvar alterações</button>
+    </div>
+
+    <!-- ─── HISTÓRIA ─── -->
+    <div class="adm-panel" id="panel-historia">
+      <div class="panel-header">
+        <h3>📖 Nossa História</h3>
+        <p>Edite o texto da seção de história e a foto da família/parreiral.</p>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Textos</div>
+        <div class="af">
+          <label>Título da seção</label>
+          <input type="text" id="hist_title" placeholder="Uma história de dedicação e sucesso"/>
+        </div>
+        <div class="af">
+          <label>Parágrafo 1</label>
+          <textarea id="hist_p1" rows="4"></textarea>
+        </div>
+        <div class="af">
+          <label>Parágrafo 2</label>
+          <textarea id="hist_p2" rows="4"></textarea>
+        </div>
+        <div class="af">
+          <label>Parágrafo 3</label>
+          <textarea id="hist_p3" rows="4"></textarea>
+        </div>
+        <div class="af">
+          <label>Parágrafo 4</label>
+          <textarea id="hist_p4" rows="4"></textarea>
+        </div>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Foto da História</div>
+        <div class="imgur-hint">
+          📷 Envie a foto no <a href="https://imgur.com" target="_blank">imgur.com</a>, copie o link direto e cole abaixo.
+        </div>
+        <div class="af">
+          <label>Link da foto</label>
+          <div class="img-url-field">
+            <input type="url" id="hist_imgUrl" placeholder="https://i.imgur.com/xxxxxxx.jpg" oninput="previewUrl(this.value,'histImgPreview')"/>
+            <button class="btn-preview-img" onclick="previewUrl(document.getElementById('hist_imgUrl').value,'histImgPreview')">👁 Ver</button>
+          </div>
+        </div>
+        <div class="img-preview-wrap">
+          <img class="img-preview" id="histImgPreview" src="" alt="Preview"/>
+        </div>
+      </div>
+      <button class="btn-save" onclick="saveSection('historia')">💾 Salvar alterações</button>
+    </div>
+
+    <!-- ─── UVAS ─── -->
+    <div class="adm-panel" id="panel-uvas">
+      <div class="panel-header">
+        <h3>🍇 Nossas Uvas</h3>
+        <p>Edite nome, descrição e foto de cada variedade.</p>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">7 Variedades</div>
+        <div class="uvas-admin-grid" id="uvasAdminGrid">
+          <!-- Gerado por JS -->
+        </div>
+      </div>
+      <button class="btn-save" onclick="saveSection('uvas')">💾 Salvar todas as uvas</button>
+    </div>
+
+    <!-- ─── PIQUENIQUE ─── -->
+    <div class="adm-panel" id="panel-piquenique">
+      <div class="panel-header">
+        <h3>🧺 Piquenique</h3>
+        <p>Textos, preços dos kits e informações da experiência.</p>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Textos principais</div>
+        <div class="af">
+          <label>Título</label>
+          <input type="text" id="piq_title" placeholder="Piquenique na Parreira"/>
+        </div>
+        <div class="af">
+          <label>Descrição</label>
+          <textarea id="piq_desc" rows="3"></textarea>
+        </div>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Kits e Preços</div>
+        <div class="af-row-3">
+          <div class="af">
+            <label>Kit 2 pessoas <span>preço R$</span></label>
+            <input type="text" id="kit2_price" placeholder="300"/>
+          </div>
+          <div class="af">
+            <label>Kit 4 pessoas <span>preço R$</span></label>
+            <input type="text" id="kit4_price" placeholder="600"/>
+          </div>
+          <div class="af">
+            <label>Kit 6 pessoas <span>preço R$</span></label>
+            <input type="text" id="kit6_price" placeholder="900"/>
+          </div>
+        </div>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Informações da Experiência</div>
+        <div class="af-row">
+          <div class="af">
+            <label>Temporada</label>
+            <input type="text" id="piq_temporada" placeholder="Janeiro · Fevereiro · Março"/>
+          </div>
+          <div class="af">
+            <label>Duração</label>
+            <input type="text" id="piq_duracao" placeholder="1h30 por sessão"/>
+          </div>
+        </div>
+        <div class="af-row">
+          <div class="af">
+            <label>Sinal (%)</label>
+            <input type="text" id="piq_sinal" placeholder="40"/>
+          </div>
+          <div class="af">
+            <label>WhatsApp (número internacional)</label>
+            <input type="text" id="piq_wa" placeholder="5521965294486"/>
+          </div>
+        </div>
+        <div class="af">
+          <label>O que está incluso <span>(um item por linha)</span></label>
+          <textarea id="piq_incluso" rows="6" placeholder="Espaço exclusivo na parreira por 1h30&#10;Cesta de café artesanal completa&#10;Pão caseiro, geleias e frios..."></textarea>
+        </div>
+      </div>
+      <button class="btn-save" onclick="saveSection('piquenique')">💾 Salvar alterações</button>
+    </div>
+
+    <!-- ─── GALERIA ─── -->
+    <div class="adm-panel" id="panel-galeria">
+      <div class="panel-header">
+        <h3>📸 Galeria de Fotos</h3>
+        <p>Substitua as 5 fotos exibidas no carrossel da galeria.</p>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Fotos do Piquenique</div>
+        <div class="imgur-hint">
+          📷 Para cada foto: acesse <a href="https://imgur.com" target="_blank">imgur.com</a> → faça upload → copie o link direto (ex: <em>https://i.imgur.com/abc123.jpg</em>) → cole abaixo. Legenda é opcional.
+        </div>
+        <div class="imgs-grid" id="galeriaGrid">
+          <!-- Gerado por JS -->
+        </div>
+      </div>
+      <button class="btn-save" onclick="saveSection('galeria')">💾 Salvar galeria</button>
+    </div>
+
+    <!-- ─── CONTATO ─── -->
+    <div class="adm-panel" id="panel-contato">
+      <div class="panel-header">
+        <h3>📍 Contato</h3>
+        <p>Informações de contato e funcionamento exibidas no site.</p>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Informações</div>
+        <div class="af-row">
+          <div class="af">
+            <label>Localização</label>
+            <input type="text" id="cont_local" placeholder="Aracê, Domingos Martins — ES"/>
+          </div>
+          <div class="af">
+            <label>WhatsApp (exibição)</label>
+            <input type="text" id="cont_wa" placeholder="(21) 96529-4486 · Cássio Fellipe"/>
+          </div>
+        </div>
+        <div class="af-row">
+          <div class="af">
+            <label>Temporada</label>
+            <input type="text" id="cont_temporada" placeholder="Janeiro · Fevereiro · Março"/>
+          </div>
+          <div class="af">
+            <label>Funcionamento</label>
+            <input type="text" id="cont_func" placeholder="Sexta, Sábado e Domingo · Das 09h às 18h"/>
+          </div>
+        </div>
+        <div class="af">
+          <label>E-mail <span>(opcional)</span></label>
+          <input type="email" id="cont_email" placeholder="contato@uvasdolo.com.br"/>
+        </div>
+      </div>
+      <button class="btn-save" onclick="saveSection('contato')">💾 Salvar alterações</button>
+    </div>
+
+    <!-- ─── DIAS DISPONÍVEIS ─── -->
+    <div class="adm-panel" id="panel-dias">
+      <div class="panel-header">
+        <h3>📅 Dias Disponíveis</h3>
+        <p>Gerencie as datas que aparecem no formulário de agendamento.</p>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Adicionar data</div>
+        <div class="af-row">
+          <div class="af">
+            <label>Data</label>
+            <input type="date" id="newDiaDate"/>
+          </div>
+          <div class="af">
+            <label>Rótulo <span>ex: Sáb, Dom, Sex</span></label>
+            <select id="newDiaLabel">
+              <option value="Sex">Sexta-feira</option>
+              <option value="Sáb">Sábado</option>
+              <option value="Dom">Domingo</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-save" onclick="addDia()" style="margin-top:.25rem">+ Adicionar data</button>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Datas cadastradas</div>
+        <table class="dias-table" id="diasTable">
+          <thead><tr><th>Data</th><th>Dia</th><th>Exibição</th><th>Ação</th></tr></thead>
+          <tbody id="diasTableBody">
+            <tr><td colspan="4" style="color:var(--text-lt);font-size:.83rem;padding:1rem .75rem">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── HORÁRIOS ─── -->
+    <div class="adm-panel" id="panel-horarios">
+      <div class="panel-header">
+        <h3>⏰ Horários</h3>
+        <p>Gerencie os horários disponíveis no formulário de agendamento.</p>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Adicionar horário</div>
+        <div class="af-row">
+          <div class="af">
+            <label>Horário de início</label>
+            <input type="time" id="newHorarioInicio" value="09:00"/>
+          </div>
+          <div class="af">
+            <label>Horário de término</label>
+            <input type="time" id="newHorarioTermino" value="10:30"/>
+          </div>
+        </div>
+        <div class="af-row">
+          <div class="af">
+            <label>Período <span>ex: Manhã, Tarde</span></label>
+            <select id="newHorarioPeriodo">
+              <option value="Manhã">Manhã</option>
+              <option value="Tarde">Tarde</option>
+              <option value="Fim de tarde">Fim de tarde</option>
+              <option value="Noite">Noite</option>
+            </select>
+          </div>
+          <div class="af">
+            <label>Ícone <span>emoji do período</span></label>
+            <select id="newHorarioIco">
+              <option value="🌅">🌅 Amanhecer</option>
+              <option value="☀️">☀️ Manhã</option>
+              <option value="🌤️">🌤️ Tarde claro</option>
+              <option value="🌇">🌇 Fim de tarde</option>
+              <option value="🌆">🌆 Entardecer</option>
+              <option value="🌙">🌙 Noite</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-save" onclick="addHorario()" style="margin-top:.25rem">+ Adicionar horário</button>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Horários cadastrados</div>
+        <table class="dias-table" id="horariosTable">
+          <thead>
+            <tr>
+              <th>Ícone</th>
+              <th>Início</th>
+              <th>Término</th>
+              <th>Período</th>
+              <th>Ação</th>
+            </tr>
+          </thead>
+          <tbody id="horariosTableBody">
+            <tr><td colspan="5" style="color:var(--text-lt);font-size:.83rem;padding:1rem .75rem">Carregando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ─── RESERVAS ─── -->
+    <div class="adm-panel" id="panel-reservas">
+      <div class="panel-header">
+        <h3>📋 Reservas</h3>
+        <p>Solicitações recebidas via formulário de agendamento.</p>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Filtrar por status</div>
+        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem">
+          <button class="btn-filter active" onclick="filterReservas('todas')" id="filt-todas">Todas</button>
+          <button class="btn-filter" onclick="filterReservas('pendente')" id="filt-pendente">⏳ Pendentes</button>
+          <button class="btn-filter" onclick="filterReservas('confirmada')" id="filt-confirmada">✅ Confirmadas</button>
+          <button class="btn-filter" onclick="filterReservas('cancelada')" id="filt-cancelada">❌ Canceladas</button>
+          <button class="btn-secondary" onclick="loadReservas()" style="margin-left:auto;padding:.38rem .9rem;font-size:.78rem">🔄 Atualizar</button>
+        </div>
+      </div>
+      <div id="reservasList" style="font-size:.83rem;color:var(--text-lt)">Carregando...</div>
+    </div>
+
+    <!-- ─── CONFIGURAÇÕES ─── -->
+    <div class="adm-panel" id="panel-config">
+      <div class="panel-header">
+        <h3>⚙️ Configurações</h3>
+        <p>Dados do sistema e acesso ao Firebase.</p>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Firebase</div>
+        <div style="background:var(--beige);border-radius:8px;padding:1rem;font-size:.82rem;color:var(--text-mid);line-height:1.8">
+          <strong style="display:block;margin-bottom:.5rem;color:var(--wine)">⚠️ Como configurar o Firebase</strong>
+          1. Acesse <a href="https://console.firebase.google.com" target="_blank" style="color:var(--wine)">console.firebase.google.com</a><br/>
+          2. Crie um projeto chamado <strong>uvasdolo</strong><br/>
+          3. Ative: <strong>Authentication</strong> (e-mail/senha) · <strong>Firestore</strong> · <strong>Storage</strong><br/>
+          4. Em Authentication, adicione seu e-mail como usuário<br/>
+          5. Copie as credenciais do projeto e substitua abaixo<br/>
+          6. Hospede os arquivos no <a href="https://netlify.com" target="_blank" style="color:var(--wine)">Netlify</a> (gratuito)
+        </div>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Credenciais Firebase <span style="font-weight:400;color:var(--text-lt);font-size:.75rem;text-transform:none">(edite diretamente no arquivo admin.html)</span></div>
+        <pre style="background:var(--beige);padding:1rem;border-radius:8px;font-size:.78rem;overflow-x:auto;line-height:1.7;color:var(--text-mid)">const firebaseConfig = {
+  apiKey:            "AIzaSyDd8eKsOwRbic_yfHFQQvk_VLrjVQiA5Os",
+  authDomain:        "uvas-do-lo.firebaseapp.com",
+  projectId:         "uvas-do-lo",
+  storageBucket:     "uvas-do-lo.firebasestorage.app",
+  messagingSenderId: "109625095781",
+  appId:             "1:109625095781:web:8409a17211fad7a1def88c"
+};</pre>
+      </div>
+      <div class="adm-card">
+        <div class="adm-card-title">Alterar senha</div>
+        <div class="af">
+          <label>Novo e-mail admin</label>
+          <input type="email" id="cfg_email" placeholder="seu@email.com"/>
+        </div>
+        <button class="btn-save" onclick="updateEmail()">Atualizar e-mail</button>
+        <button class="btn-secondary" style="margin-left:.75rem" onclick="sendPasswordReset()">Enviar link troca de senha</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="adm-toast" id="admToast"></div>
+
+<!-- ══════════════ SCRIPTS ══════════════ -->
+<script>
+// ════════════════════════════════════════════════════════
+//  ⚠️  SUBSTITUA AS CREDENCIAIS ABAIXO PELAS DO SEU FIREBASE
+//  Acesse: console.firebase.google.com → Seu projeto →
+//  Configurações → Configuração do SDK web
+// ════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "AIzaSyDd8eKsOwRbic_yfHFQQvk_VLrjVQiA5Os",
+  authDomain:        "uvas-do-lo.firebaseapp.com",
+  projectId:         "uvas-do-lo",
+  storageBucket:     "uvas-do-lo.firebasestorage.app",
+  messagingSenderId: "109625095781",
+  appId:             "1:109625095781:web:8409a17211fad7a1def88c"
+};
+
+// ── INIT ──────────────────────────────────────────────
+let app, auth, db, storage;
+let isFirebaseReady = false;
+
+try {
+  app     = firebase.initializeApp(firebaseConfig);
+  auth    = firebase.auth();
+  db      = firebase.firestore();
+  // storage via Imgur URLs — no Firebase Storage needed
+  isFirebaseReady = (firebaseConfig.apiKey !== "COLE_SEU_apiKey");
+} catch(e) {
+  console.warn("Firebase não configurado:", e.message);
+}
+
+// ── AUTH LISTENER ─────────────────────────────────────
+if (auth) {
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('adminApp').style.display = 'block';
+      document.getElementById('userEmail').textContent = user.email;
+      document.getElementById('dashName').textContent = user.email.split('@')[0];
+      document.getElementById('cfg_email').value = user.email;
+      if (isFirebaseReady) {
+        loadAllData();
+        loadReservas();
+        loadDias();
+        loadHorarios();
+      } else {
+        showDemoMode();
+      }
+    } else {
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('adminApp').style.display = 'none';
+    }
+  });
+}
+
+// ── LOGIN ─────────────────────────────────────────────
+function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  const btn   = document.getElementById('btnLogin');
+  const err   = document.getElementById('loginError');
+
+  if (!email || !pass) { showLoginErr('Preencha e-mail e senha.'); return; }
+  if (!isFirebaseReady) { showLoginErr('Firebase não configurado. Configure as credenciais no arquivo admin.html.'); return; }
+
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+  err.classList.remove('show');
+
+  auth.signInWithEmailAndPassword(email, pass)
+    .catch(e => {
+      btn.disabled = false;
+      btn.textContent = 'Entrar';
+      const msgs = {
+        'auth/wrong-password':    'Senha incorreta.',
+        'auth/user-not-found':    'E-mail não cadastrado.',
+        'auth/invalid-email':     'E-mail inválido.',
+        'auth/too-many-requests': 'Muitas tentativas. Tente mais tarde.',
+      };
+      showLoginErr(msgs[e.code] || 'Erro ao entrar: ' + e.message);
+    });
+}
+
+function doLogout() { auth.signOut(); }
+
+function showLoginErr(msg) {
+  const el = document.getElementById('loginError');
+  el.textContent = msg; el.classList.add('show');
+}
+
+// ── RECUPERAÇÃO DE SENHA ──────────────────────────────
+function showRecovery() {
+  document.getElementById('formLogin').style.display = 'none';
+  document.getElementById('formRecovery').style.display = 'block';
+  document.getElementById('loginError').classList.remove('show');
+}
+function showLogin() {
+  document.getElementById('formLogin').style.display = 'block';
+  document.getElementById('formRecovery').style.display = 'none';
+  document.getElementById('loginSuccess').classList.remove('show');
+  document.getElementById('loginError').classList.remove('show');
+}
+function doRecovery() {
+  const email = document.getElementById('recoveryEmail').value.trim();
+  if (!email) { showLoginErr('Informe o e-mail.'); return; }
+  if (!isFirebaseReady) { showLoginErr('Firebase não configurado.'); return; }
+  auth.sendPasswordResetEmail(email)
+    .then(() => {
+      const s = document.getElementById('loginSuccess');
+      s.textContent = 'Link enviado! Verifique sua caixa de e-mail.';
+      s.classList.add('show');
+    })
+    .catch(e => showLoginErr('Erro: ' + e.message));
+}
+
+// ── NAVIGATION ────────────────────────────────────────
+const panelTitles = {
+  dashboard: 'Dashboard',
+  hero:      'Capa (Hero)',
+  historia:  'Nossa História',
+  uvas:      'Nossas Uvas',
+  piquenique:'Piquenique',
+  galeria:   'Galeria de Fotos',
+  contato:   'Contato',
+  dias:      'Dias Disponíveis',
+  horarios:  'Horários',
+  reservas:  'Reservas',
+  config:    'Configurações',
+};
+
+function showPanel(name) {
+  document.querySelectorAll('.adm-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('panel-' + name)?.classList.add('active');
+  document.querySelector(`.sidebar-item[data-panel="${name}"]`)?.classList.add('active');
+  document.getElementById('headerTitle').textContent = panelTitles[name] || name;
+  if (window.innerWidth < 900) closeSidebar();
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+// ── TOAST ─────────────────────────────────────────────
+function toast(msg, type='') {
+  const t = document.getElementById('admToast');
+  t.textContent = msg;
+  t.className = 'adm-toast' + (type ? ' '+type : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ── DEMO MODE ─────────────────────────────────────────
+function showDemoMode() {
+  toast('⚠️ Firebase não configurado. Modo demonstração.', 'warning');
+  loadDefaultValues();
+  horariosList = [...HORARIOS_DEFAULT];
+  buildHorariosTable(horariosList);
+}
+
+// ── DEFAULT VALUES ─────────────────────────────────────
+const DEFAULTS = {
+  hero: {
+    pill:  '🍇 Aracê · Pedra Azul · Espírito Santo',
+    title: 'Piquenique na Parreira',
+    sub:   'Uma experiência única entre fileiras de uvas — tranquilidade, gastronomia artesanal e contato verdadeiro com a natureza serrana.',
+    btn1:  '🧺 Agendar Piquenique',
+    btn2:  '🍇 Conhecer as Uvas',
+  },
+  historia: {
+    title: 'Uma história de dedicação e sucesso',
+    p1: 'Ló nasceu e cresceu em Aracê, no interior do Espírito Santo, dedicando sua vida à agricultura. Cenoura, tomate, repolho, pimentão, morango e couve-flor eram algumas das culturas que cultivava com tanto cuidado.',
+    p2: 'Mas um dia ele decidiu mudar. Inspirado pelo conselho de um amigo, Ló resolveu apostar em algo novo: uvas. Determinado, buscou conhecimento, fez cursos, conversou com agricultores experientes e até viajou para aprender mais. Em 2013, plantou suas primeiras 50 mudas.',
+    p3: 'Dois anos depois, em 2015, veio a recompensa: a primeira colheita. Foi então que nasceram as famosas "Uvas do Ló". A cada ano, a produção cresceu, novas variedades foram introduzidas.',
+    p4: 'Hoje, Ló e sua família têm o prazer de convidar você e sua família para visitar o parreiral e viver essa experiência única. Venha celebrar mais uma temporada das Uvas do Ló!',
+  },
+  piquenique: {
+    title:    'Piquenique na Parreira',
+    desc:     'Uma experiência especial em meio às parreiras de uvas — tranquilidade, boa comida e contato com a natureza serrana de Aracê.',
+    kit2:     '300',
+    kit4:     '600',
+    kit6:     '900',
+    temporada:'Janeiro · Fevereiro · Março',
+    duracao:  '1h30 por sessão',
+    sinal:    '40',
+    wa:       '5521965294486',
+    incluso:  'Espaço exclusivo na parreira por 1h30\nCesta de café artesanal completa\nPão caseiro, geleias e frios da propriedade\nFrutas da estação e sucos naturais\nManta e almofadas para conforto',
+  },
+  contato: {
+    local:     'Aracê, Domingos Martins — ES · Próximo a Pedra Azul',
+    wa:        '(21) 96529-4486 · Cássio Fellipe',
+    temporada: 'Janeiro · Fevereiro · Março',
+    func:      'Sexta, Sábado e Domingo · Das 09h às 18h',
+    email:     '',
+  },
+  uvas: [
+    { nome:'Niágara Rosada',  desc:'De casca rosada e sabor intensamente doce, com toque foxado característico. A favorita das famílias e ideal para sucos naturais.', epoca:'Jan · Fev' },
+    { nome:'Isabel',          desc:'Uva tinta de origem americana, com sabor marcante e acidez equilibrada. Excelente para produção de vinho artesanal e suco robusto.', epoca:'Jan · Mar' },
+    { nome:'Concord',         desc:'Azulada e aromática, carrega o sabor clássico das geleiadas. Pele grossa, polpa suculenta e aroma inconfundível.', epoca:'Fev' },
+    { nome:'Moscatel',        desc:'Delicada e perfumada, a mais refinada do parreiral. Cachos grandes, bagas firmes e aroma floral inconfundível.', epoca:'Fev · Mar' },
+    { nome:'Itália',          desc:'A rainha das uvas finas. Cachos volumosos com bagas douradas de casca fina e polpa crocante. Sabor adocicado com leve acidez.', epoca:'Jan · Fev' },
+    { nome:'Rubi',            desc:'De coloração vermelho-rubi intensa e sabor equilibrado entre doçura e acidez. Excelente produtividade e casca firme.', epoca:'Fev · Mar' },
+    { nome:'Niágara Branca',  desc:'A versão branca da Niágara — mais delicada e com aromas florais pronunciados. Cachos grandes e bagas douradas translúcidas.', epoca:'Mar' },
+  ],
+};
+
+function loadDefaultValues() {
+  const h = DEFAULTS.hero;
+  setVal('hero_pill', h.pill); setVal('hero_title', h.title);
+  setVal('hero_sub', h.sub); setVal('hero_btn1', h.btn1); setVal('hero_btn2', h.btn2);
+
+  const hi = DEFAULTS.historia;
+  setVal('hist_title', hi.title); setVal('hist_p1', hi.p1);
+  setVal('hist_p2', hi.p2); setVal('hist_p3', hi.p3); setVal('hist_p4', hi.p4);
+
+  const p = DEFAULTS.piquenique;
+  setVal('piq_title', p.title); setVal('piq_desc', p.desc);
+  setVal('kit2_price', p.kit2); setVal('kit4_price', p.kit4); setVal('kit6_price', p.kit6);
+  setVal('piq_temporada', p.temporada); setVal('piq_duracao', p.duracao);
+  setVal('piq_sinal', p.sinal); setVal('piq_wa', p.wa);
+  setVal('piq_incluso', p.incluso);
+
+  const c = DEFAULTS.contato;
+  setVal('cont_local', c.local); setVal('cont_wa', c.wa);
+  setVal('cont_temporada', c.temporada); setVal('cont_func', c.func);
+  setVal('cont_email', c.email);
+
+  buildUvasGrid(DEFAULTS.uvas);
+  buildGaleriaGrid([]);
+  buildDiasTable([
+    { id:'1', label:'Sex', date:'2026-01-17', disp:'17/01' },
+    { id:'2', label:'Sáb', date:'2026-01-18', disp:'18/01' },
+    { id:'3', label:'Dom', date:'2026-01-19', disp:'19/01' },
+  ]);
+}
+
+function setVal(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.value = val || '';
+}
+
+// ── LOAD ALL DATA FROM FIREBASE ───────────────────────
+async function loadAllData() {
+  try {
+    const snap = await db.collection('site').get();
+    snap.forEach(doc => {
+      const data = doc.data();
+      const sec = doc.id;
+      if (sec === 'hero') {
+        setVal('hero_pill', data.pill); setVal('hero_title', data.title);
+        setVal('hero_sub', data.sub); setVal('hero_btn1', data.btn1); setVal('hero_btn2', data.btn2);
+        if (data.imgUrl) { setVal('hero_imgUrl', data.imgUrl); previewUrl(data.imgUrl,'heroImgPreview'); }
+      }
+      if (sec === 'historia') {
+        setVal('hist_title', data.title);
+        setVal('hist_p1', data.p1); setVal('hist_p2', data.p2);
+        setVal('hist_p3', data.p3); setVal('hist_p4', data.p4);
+        if (data.imgUrl) { setVal('hist_imgUrl', data.imgUrl); previewUrl(data.imgUrl,'histImgPreview'); }
+      }
+      if (sec === 'piquenique') {
+        setVal('piq_title', data.title); setVal('piq_desc', data.desc);
+        setVal('kit2_price', data.kit2); setVal('kit4_price', data.kit4); setVal('kit6_price', data.kit6);
+        setVal('piq_temporada', data.temporada); setVal('piq_duracao', data.duracao);
+        setVal('piq_sinal', data.sinal); setVal('piq_wa', data.wa);
+        setVal('piq_incluso', data.incluso);
+      }
+      if (sec === 'contato') {
+        setVal('cont_local', data.local); setVal('cont_wa', data.wa);
+        setVal('cont_temporada', data.temporada); setVal('cont_func', data.func);
+        setVal('cont_email', data.email);
+      }
+      if (sec === 'uvas' && data.items) buildUvasGrid(data.items);
+      if (sec === 'galeria' && data.photos) buildGaleriaGrid(data.photos);
+    });
+    // Fill defaults for anything not in Firebase yet
+    loadDefaultValues();
+  } catch(e) {
+    toast('Erro ao carregar dados: ' + e.message, 'error');
+    loadDefaultValues();
+  }
+}
+
+// ── SAVE SECTION ──────────────────────────────────────
+async function saveSection(section) {
+  if (!isFirebaseReady) {
+    toast('⚠️ Configure o Firebase para salvar. Os dados foram atualizados localmente.', 'warning');
+    return;
+  }
+  const data = collectSectionData(section);
+  try {
+    await db.collection('site').doc(section).set(data, { merge: true });
+    toast('✅ ' + (panelTitles[section] || section) + ' salvo com sucesso!', 'success');
+  } catch(e) {
+    toast('Erro ao salvar: ' + e.message, 'error');
+  }
+}
+
+function collectSectionData(sec) {
+  const g = id => document.getElementById(id)?.value || '';
+  if (sec === 'hero')      return { pill:g('hero_pill'), title:g('hero_title'), sub:g('hero_sub'), btn1:g('hero_btn1'), btn2:g('hero_btn2'), imgUrl:g('hero_imgUrl') };
+  if (sec === 'historia')  return { title:g('hist_title'), p1:g('hist_p1'), p2:g('hist_p2'), p3:g('hist_p3'), p4:g('hist_p4'), imgUrl:g('hist_imgUrl') };
+  if (sec === 'piquenique')return { title:g('piq_title'), desc:g('piq_desc'), kit2:g('kit2_price'), kit4:g('kit4_price'), kit6:g('kit6_price'), temporada:g('piq_temporada'), duracao:g('piq_duracao'), sinal:g('piq_sinal'), wa:g('piq_wa'), incluso:g('piq_incluso') };
+  if (sec === 'contato')   return { local:g('cont_local'), wa:g('cont_wa'), temporada:g('cont_temporada'), func:g('cont_func'), email:g('cont_email') };
+  if (sec === 'uvas')      return { items: collectUvas() };
+  if (sec === 'galeria')   return { photos: collectGaleria() };
+  return {};
+}
+
+// ── UVAS GRID ─────────────────────────────────────────
+function buildUvasGrid(uvas) {
+  const grid = document.getElementById('uvasAdminGrid');
+  grid.innerHTML = uvas.map((u, i) => `
+    <div class="uva-admin-card" id="uvaCard${i}">
+      <div class="uva-admin-thumb" style="position:relative;height:120px;overflow:hidden">
+        <img src="${u.imgUrl || 'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=300&auto=format&fit=crop'}" alt="${u.nome}" id="uvaThumb${i}" style="width:100%;height:100%;object-fit:cover"/>
+      </div>
+      <div class="uva-admin-body">
+        <input type="text" id="uvaNome${i}" value="${u.nome || ''}" placeholder="Nome da uva"/>
+        <input type="text" id="uvaEpoca${i}" value="${u.epoca || ''}" placeholder="Época ex: Jan · Fev"/>
+        <input type="url" id="uvaImgUrl${i}" value="${u.imgUrl || ''}" placeholder="Link Imgur da foto" 
+          onchange="document.getElementById('uvaThumb'+${i}).src=this.value||'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=300&auto=format&fit=crop'" 
+          style="font-size:.72rem;color:var(--text-lt)"/>
+        <textarea id="uvaDesc${i}" placeholder="Descrição...">${u.desc || ''}</textarea>
+      </div>
+    </div>
+  `).join('');
+}
+
+function collectUvas() {
+  return Array.from({length:7}, (_,i) => ({
+    nome:   document.getElementById(`uvaNome${i}`)?.value || '',
+    epoca:  document.getElementById(`uvaEpoca${i}`)?.value || '',
+    desc:   document.getElementById(`uvaDesc${i}`)?.value || '',
+    imgUrl: document.getElementById(`uvaImgUrl${i}`)?.value?.trim() || document.getElementById(`uvaThumb${i}`)?.src || '',
+  }));
+}
+
+// ── GALERIA GRID ──────────────────────────────────────
+let galeriaPhotos = [];
+
+function buildGaleriaGrid(photos) {
+  galeriaPhotos = photos.slice();
+  renderGaleriaGrid();
+}
+
+function renderGaleriaGrid() {
+  const grid = document.getElementById('galeriaGrid');
+  // ensure 5 slots
+  while (galeriaPhotos.length < 5) galeriaPhotos.push({ src:'', caption:'' });
+  grid.innerHTML = galeriaPhotos.slice(0,5).map((p, i) => `
+    <div class="img-url-card">
+      <img class="card-thumb ${p.src ? 'show' : ''}" id="galThumb${i}" src="${p.src || ''}" alt=""/>
+      <label>Foto ${i+1}</label>
+      <input type="url" id="galUrl${i}" value="${p.src || ''}" placeholder="https://i.imgur.com/xxx.jpg"
+        oninput="updateGalPreview(${i})"/>
+      <input type="text" id="galCap${i}" value="${p.caption || ''}" placeholder="Legenda (opcional)"/>
+      <div class="img-url-card-actions">
+        <button class="btn-check-url" onclick="updateGalPreview(${i})">👁 Pré-visualizar</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function updateGalPreview(i) {
+  const url = document.getElementById('galUrl'+i)?.value?.trim();
+  const thumb = document.getElementById('galThumb'+i);
+  if (url && thumb) { thumb.src = url; thumb.classList.add('show'); }
+}
+
+function removeGaleriaPhoto(i) {
+  galeriaPhotos.splice(i, 1);
+  renderGaleriaGrid();
+  toast('Foto removida.', '');
+}
+
+// Galeria now uses URL fields — no file upload needed
+
+function collectGaleria() {
+  return Array.from({length:5}, (_,i) => ({
+    src:     document.getElementById('galUrl'+i)?.value?.trim() || '',
+    caption: document.getElementById('galCap'+i)?.value?.trim() || '',
+  })).filter(p => p.src);
+}
+
+// ── DIAS DISPONÍVEIS ──────────────────────────────────
+let diasList = [];
+
+async function loadDias() {
+  if (!isFirebaseReady) return;
+  try {
+    const snap = await db.collection('dias').orderBy('date').get();
+    diasList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    buildDiasTable(diasList);
+    document.getElementById('dashReservas').textContent = '—';
+  } catch(e) { console.warn('Dias:', e); }
+}
+
+function buildDiasTable(dias) {
+  const tbody = document.getElementById('diasTableBody');
+  if (!dias.length) {
+    tbody.innerHTML = '<tr><td colspan="4" style="color:var(--text-lt);font-size:.83rem;padding:1rem .75rem">Nenhuma data cadastrada.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = dias.map(d => {
+    const cls = d.label === 'Sex' ? 'dia-sex' : d.label === 'Sáb' ? 'dia-sab' : 'dia-dom';
+    const dateStr = d.date ? new Date(d.date + 'T12:00:00').toLocaleDateString('pt-BR') : d.disp || '';
+    return `<tr>
+      <td>${dateStr}</td>
+      <td><span class="dia-tag ${cls}">${d.label}</span></td>
+      <td>${d.disp || dateStr}</td>
+      <td><button class="btn-remove-dia" onclick="removeDia('${d.id}')">🗑</button></td>
+    </tr>`;
+  }).join('');
+}
+
+async function addDia() {
+  const dateVal  = document.getElementById('newDiaDate').value;
+  const labelVal = document.getElementById('newDiaLabel').value;
+  if (!dateVal) { toast('Selecione uma data.', 'warning'); return; }
+  const d = new Date(dateVal + 'T12:00:00');
+  const disp = d.toLocaleDateString('pt-BR', { day:'2-digit', month:'2-digit' });
+  const newDia = { label: labelVal, date: dateVal, disp };
+  if (!isFirebaseReady) {
+    newDia.id = String(Date.now());
+    diasList.push(newDia); buildDiasTable(diasList);
+    toast('Data adicionada (demo).', 'success'); return;
+  }
+  try {
+    const ref = await db.collection('dias').add(newDia);
+    newDia.id = ref.id; diasList.push(newDia);
+    buildDiasTable(diasList); toast('Data adicionada!', 'success');
+  } catch(e) { toast('Erro: '+e.message,'error'); }
+}
+
+async function removeDia(id) {
+  diasList = diasList.filter(d => d.id !== id);
+  buildDiasTable(diasList);
+  if (!isFirebaseReady) return;
+  try { await db.collection('dias').doc(id).delete(); toast('Data removida.',''); }
+  catch(e) { toast('Erro: '+e.message,'error'); }
+}
+
+// ── RESERVAS ──────────────────────────────────────────
+// ── RESERVAS ──────────────────────────────────────────
+let todasReservas = [];
+let filtroAtivo = 'todas';
+
+async function loadReservas() {
+  const list = document.getElementById('reservasList');
+  list.innerHTML = '<p style="color:var(--text-lt);padding:.5rem 0">⏳ Carregando reservas...</p>';
+
+  if (!isFirebaseReady) {
+    list.innerHTML = '<p style="color:var(--text-lt)">Configure o Firebase para ver as reservas.</p>';
+    return;
+  }
+  try {
+    const snap = await db.collection('reservas').orderBy('criadoEm','desc').limit(50).get();
+    document.getElementById('dashReservas').textContent = snap.docs.filter(d => d.data().status === 'pendente').length;
+
+    if (!snap.size) {
+      list.innerHTML = '<p style="color:var(--text-lt);padding:.5rem 0">Nenhuma reserva ainda. Quando um cliente confirmar pelo formulário, aparecerá aqui.</p>';
+      return;
+    }
+
+    todasReservas = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderReservas();
+  } catch(e) {
+    list.innerHTML = `<p style="color:var(--error)">Erro ao carregar: ${e.message}</p>`;
+  }
+}
+
+function filterReservas(status) {
+  filtroAtivo = status;
+  document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+  document.getElementById('filt-' + status)?.classList.add('active');
+  renderReservas();
+}
+
+function renderReservas() {
+  const list = document.getElementById('reservasList');
+  const filtered = filtroAtivo === 'todas'
+    ? todasReservas
+    : todasReservas.filter(r => (r.status || 'pendente') === filtroAtivo);
+
+  if (!filtered.length) {
+    list.innerHTML = '<p style="color:var(--text-lt);padding:.5rem 0">Nenhuma reserva neste filtro.</p>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(r => {
+    const status  = r.status || 'pendente';
+    const sinal   = r.sinal || Math.round((r.valor||0) * 0.4);
+    const dt      = r.criadoEm?.toDate
+      ? r.criadoEm.toDate().toLocaleString('pt-BR')
+      : (r.criadoEm ? new Date(r.criadoEm).toLocaleString('pt-BR') : '—');
+    const badges  = { pendente:'⏳ Pendente', confirmada:'✅ Confirmada', cancelada:'❌ Cancelada' };
+    const tel     = (r.telefone||'').replace(/\D/g,'');
+    const waMsg   = encodeURIComponent(`Olá ${r.nome||''}! Sua reserva do Piquenique na Parreira está confirmada 🍇\n📅 ${r.dataVisita||''} às ${(r.horario||'').split('→')[0].trim()}\n🧺 ${r.kit||''}\n💳 Sinal de R$ ${sinal} via PIX.`);
+
+    return `
+    <div class="reserva-card status-${status}" id="reserva-${r.id}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem">
+        <span class="reserva-nome">${r.nome || '—'}</span>
+        <div style="display:flex;align-items:center;gap:.5rem">
+          <span class="badge-status badge-${status}">${badges[status]||status}</span>
+          <span style="font-size:.7rem;color:var(--text-lt)">${dt}</span>
+        </div>
+      </div>
+      <div class="reserva-info">
+        📱 ${r.telefone||'—'}
+        ${r.email ? ` &nbsp;·&nbsp; 📧 ${r.email}` : ''}
+        <br/>
+        🧺 ${r.kit||'—'} &nbsp;·&nbsp; 📅 ${r.dataVisita||'—'} &nbsp;·&nbsp; ⏰ ${r.horario||'—'}
+        <br/>
+        💰 Total: <strong>R$ ${r.valor||'—'}</strong> &nbsp;·&nbsp; 💳 Sinal: <strong>R$ ${sinal}</strong>
+        ${r.criancas && r.criancas !== '0' ? `<br/>👶 Crianças acima de 7 anos: <strong>${r.criancas === '3+' ? '3 ou mais' : r.criancas}</strong>` : ''}
+        ${r.observacoes ? `<br/>📝 <em>${r.observacoes}</em>` : ''}
+      </div>
+      <div class="reserva-actions">
+        ${status !== 'confirmada' ? `<button class="btn-confirmar" onclick="atualizarStatusReserva('${r.id}','confirmada')">✅ Confirmar</button>` : ''}
+        ${status !== 'cancelada'  ? `<button class="btn-cancelar"  onclick="atualizarStatusReserva('${r.id}','cancelada')">❌ Cancelar</button>` : ''}
+        ${tel ? `<a class="btn-wa-resp" href="https://wa.me/55${tel}?text=${waMsg}" target="_blank">💬 WhatsApp</a>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function atualizarStatusReserva(id, novoStatus) {
+  if (!isFirebaseReady) return;
+  try {
+    await db.collection('reservas').doc(id).update({ status: novoStatus });
+    const idx = todasReservas.findIndex(r => r.id === id);
+    if (idx !== -1) todasReservas[idx].status = novoStatus;
+    renderReservas();
+    const labels = { confirmada:'✅ Reserva confirmada!', cancelada:'❌ Reserva cancelada.' };
+    toast(labels[novoStatus] || 'Status atualizado.', novoStatus === 'confirmada' ? 'success' : '');
+    // Atualiza contador
+    document.getElementById('dashReservas').textContent =
+      todasReservas.filter(r => (r.status||'pendente') === 'pendente').length;
+  } catch(e) { toast('Erro: ' + e.message, 'error'); }
+}
+
+// ── IMAGE URL HELPERS ─────────────────────────────────
+function previewUrl(url, previewId) {
+  if (!url) return;
+  const img = document.getElementById(previewId);
+  if (!img) return;
+  img.src = url;
+  img.classList.add('show');
+  img.onerror = () => { img.classList.remove('show'); toast('Link inválido ou imagem não encontrada.', 'error'); };
+}
+
+// ── HORÁRIOS ──────────────────────────────────────────
+let horariosList = [];
+
+const HORARIOS_DEFAULT = [
+  { id:'h1', val:'09:00', termino:'10:30', periodo:'Manhã',       ico:'🌅' },
+  { id:'h2', val:'11:00', termino:'12:30', periodo:'Manhã',       ico:'☀️' },
+  { id:'h3', val:'14:00', termino:'15:30', periodo:'Tarde',       ico:'🌤️' },
+  { id:'h4', val:'15:00', termino:'16:30', periodo:'Tarde',       ico:'🌤️' },
+  { id:'h5', val:'16:00', termino:'17:30', periodo:'Tarde',       ico:'🌇' },
+  { id:'h6', val:'17:00', termino:'18:30', periodo:'Fim de tarde',ico:'🌆' },
+];
+
+async function loadHorarios() {
+  if (!isFirebaseReady) {
+    horariosList = [...HORARIOS_DEFAULT];
+    buildHorariosTable(horariosList);
+    return;
+  }
+  try {
+    const snap = await db.collection('horarios').orderBy('val').get();
+    if (snap.empty) {
+      // Primeira vez: carrega os padrões e salva no Firebase
+      horariosList = [...HORARIOS_DEFAULT];
+      for (const h of horariosList) {
+        await db.collection('horarios').doc(h.id).set({ val:h.val, termino:h.termino, periodo:h.periodo, ico:h.ico });
+      }
+    } else {
+      horariosList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }
+    buildHorariosTable(horariosList);
+  } catch(e) {
+    horariosList = [...HORARIOS_DEFAULT];
+    buildHorariosTable(horariosList);
+    console.warn('Horários:', e);
+  }
+}
+
+function buildHorariosTable(horarios) {
+  const tbody = document.getElementById('horariosTableBody');
+  if (!horarios.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="color:var(--text-lt);font-size:.83rem;padding:1rem .75rem">Nenhum horário cadastrado.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = horarios.map(h => `
+    <tr>
+      <td style="font-size:1.2rem">${h.ico}</td>
+      <td><strong>${h.val}</strong></td>
+      <td>${h.termino}</td>
+      <td><span style="font-size:.75rem;background:var(--beige);padding:.15rem .6rem;border-radius:12px;color:var(--text-mid)">${h.periodo}</span></td>
+      <td><button class="btn-remove-dia" onclick="removeHorario('${h.id}')" title="Remover">🗑</button></td>
+    </tr>
+  `).join('');
+}
+
+async function addHorario() {
+  const val      = document.getElementById('newHorarioInicio').value;
+  const termino  = document.getElementById('newHorarioTermino').value;
+  const periodo  = document.getElementById('newHorarioPeriodo').value;
+  const ico      = document.getElementById('newHorarioIco').value;
+
+  if (!val || !termino) { toast('Preencha início e término.', 'warning'); return; }
+
+  // Verifica duplicata
+  if (horariosList.find(h => h.val === val)) {
+    toast('Esse horário já está cadastrado.', 'warning'); return;
+  }
+
+  const newH = { val, termino, periodo, ico };
+
+  if (!isFirebaseReady) {
+    newH.id = 'h' + Date.now();
+    horariosList.push(newH);
+    horariosList.sort((a,b) => a.val.localeCompare(b.val));
+    buildHorariosTable(horariosList);
+    toast('Horário adicionado (demo).', 'success');
+    return;
+  }
+  try {
+    const ref = await db.collection('horarios').add(newH);
+    newH.id = ref.id;
+    horariosList.push(newH);
+    horariosList.sort((a,b) => a.val.localeCompare(b.val));
+    buildHorariosTable(horariosList);
+    toast('Horário adicionado!', 'success');
+  } catch(e) { toast('Erro: '+e.message, 'error'); }
+}
+
+async function removeHorario(id) {
+  if (horariosList.length <= 1) { toast('Mantenha ao menos 1 horário.', 'warning'); return; }
+  horariosList = horariosList.filter(h => h.id !== id);
+  buildHorariosTable(horariosList);
+  if (!isFirebaseReady) return;
+  try { await db.collection('horarios').doc(id).delete(); toast('Horário removido.', ''); }
+  catch(e) { toast('Erro: '+e.message, 'error'); }
+}
+
+// ── CONFIG ────────────────────────────────────────────
+function updateEmail() {
+  const email = document.getElementById('cfg_email').value.trim();
+  if (!email || !auth) return;
+  auth.currentUser?.updateEmail(email)
+    .then(() => toast('E-mail atualizado!', 'success'))
+    .catch(e => toast('Erro: '+e.message, 'error'));
+}
+function sendPasswordReset() {
+  const email = auth?.currentUser?.email;
+  if (!email) return;
+  auth.sendPasswordResetEmail(email)
+    .then(() => toast('Link de troca de senha enviado para '+email, 'success'))
+    .catch(e => toast('Erro: '+e.message, 'error'));
+}
+
+// ── INIT ──────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  if (!isFirebaseReady) loadDefaultValues();
+});
+</script>
+</body>
+</html>
